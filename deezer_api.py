@@ -3,29 +3,30 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-
 BASE_URL = os.getenv("DEEZER_BASE_URL", "https://api.deezer.com")
 
-def get_music_recommendation(mood):
+
+def get_music_recommendation(mood, type="track"):
     """
-    Searches Deezer for a track and returns the direct link.
+    Searches Deezer for a track or playlist matching the mood.
     """
-    # Use the /search/track endpoint for better song results
-    url = f"{BASE_URL}/search/track"
-    # Append 'song' to your mood to get better music matches
-    params = {"q": f"{mood} song", "limit": 1}
+  
+    query = f"{mood} Pakistani Hindi {type}"
+    url = f"{BASE_URL}/search/{type}"
+    params = {"q": query, "limit": 1}
     
     try:
         response = requests.get(url, params=params)
         data = response.json()
         
-        # Ensure we actually got data back
         if "data" in data and len(data["data"]) > 0:
-            track = data["data"][0]
-            # This returns the direct URL to the song
-            return track['link']
-        else:
-            return "No song found for this mood."
-            
+            item = data["data"][0]
+           
+            if type == "track":
+                return (item['title'], item['artist']['name'], item['link'])
+            elif type == "playlist":
+                return (item['title'], "Various Artists", item['link'])
+        
+        return (f"{mood.capitalize()} Vibe", "Deezer", "https://www.deezer.com")
     except Exception as e:
-        return f"Error connecting to Deezer: {e}"
+        return (f"Error", "Deezer", "https://www.deezer.com")
