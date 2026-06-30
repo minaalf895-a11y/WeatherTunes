@@ -2,6 +2,3 @@ requests
 python-dotenv
 spotipy
 streamlit
-pandas
-numpy
-Pillow
