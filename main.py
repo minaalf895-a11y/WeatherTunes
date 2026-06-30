@@ -1,20 +1,16 @@
 import os
 from dotenv import load_dotenv
 
+# Load the .env file from the project root (works on any machine/OS,
+# unlike a hardcoded absolute Windows path)
+load_dotenv()
 
-# Use an absolute path to the file
-env_path = r"C:\Users\This PC\Desktop\Spotify_Project\.env"
+# Use the same env var name as weather.py / deezer_api.py expect
+api_key = os.getenv("WEATHER_API_KEY")
 
-# Load the file specifically
-load_dotenv(dotenv_path=env_path)
-
-# Print current environment variables to see what's loaded
-api_key = os.getenv("Weather_API_Key")
-
-print(f"DEBUG: Looking for file at {env_path}")
 print(f"DEBUG: API Key value is '{api_key}'")
 
 if api_key:
     print("Success!")
 else:
-    print("Failure: Still None.")
+    print("Failure: WEATHER_API_KEY not found. Check your .env file.")
