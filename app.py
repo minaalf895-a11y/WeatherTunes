@@ -1,204 +1,386 @@
 import streamlit as st
 from weather import get_weather
 from deezer_api import get_music_recommendation
-
-# 1. Page Configuration
 st.set_page_config(
-    page_title="Weather Mood Music | Your Sound, Your Vibe", 
-    page_icon="🌤️", 
-    layout="wide" # Use 'wide' layout to match the reference grid 
+    page_title="Weather Mood Music | Your Sound, Your Vibe",
+    page_icon="🌤️",
+    layout="wide"
 )
-
-# 2. Dynamic Weather/Mood Mapping
 MOOD_MAP = {
-    "Clear": {"label": "HAPPY", "icon": "😊", "theme": "#FFC107"}, # Happy
-    "Clouds": {"label": "CHILL", "icon": "😌", "theme": "#607D8B"}, # Chill
-    "Rain": {"label": "RELAX", "icon": "🌧️", "theme": "#2196F3"}, # Relax
-    "Drizzle": {"label": "PEACEFUL", "icon": "☔", "theme": "#8BC34A"}, # Peaceful
-    "Thunderstorm": {"label": "ENERGETIC", "icon": "⚡", "theme": "#E91E63"}, # Energetic
-    "Snow": {"label": "COZY", "icon": "❄️", "theme": "#9C27B0"}, # Cozy
-    "Mist": {"label": "CALM", "icon": "🌫️", "theme": "#00BCD4"}, # Calm
-    "Fog": {"label": "CALM", "icon": "🌫️", "theme": "#00BCD4"}, # Calm
-    "Haze": {"label": "DREAMY", "icon": "🌅", "theme": "#F44336"}, # Dreamy
-    "Atmosphere": {"label": "NEUTRAL", "icon": "🙂", "theme": "#757575"},
+    "Clear":        {"label": "HAPPY",     "icon": "😊", "theme": "#FFC107"},
+    "Clouds":       {"label": "CHILL",     "icon": "😌", "theme": "#607D8B"},
+    "Rain":         {"label": "RELAX",     "icon": "🌧️", "theme": "#2196F3"},
+    "Drizzle":      {"label": "PEACEFUL",  "icon": "☔", "theme": "#8BC34A"},
+    "Thunderstorm": {"label": "ENERGETIC", "icon": "⚡", "theme": "#E91E63"},
+    "Snow":         {"label": "COZY",      "icon": "❄️", "theme": "#9C27B0"},
+    "Mist":         {"label": "CALM",      "icon": "🌫️", "theme": "#00BCD4"},
+    "Fog":          {"label": "CALM",      "icon": "🌫️", "theme": "#00BCD4"},
+    "Haze":         {"label": "DREAMY",    "icon": "🌅", "theme": "#F44336"},
+    "Atmosphere":   {"label": "NEUTRAL",   "icon": "🙂", "theme": "#757575"},
 }
 DEFAULT_MOOD = {"label": "NEUTRAL", "icon": "🙂", "theme": "#757575"}
 
-# 3. Enhanced CSS for dynamic themes and professional UI
-st.markdown(f"""
+WEATHER_EMOJI = {
+    "Clear": "☀️", "Clouds": "☁️", "Rain": "🌧️", "Drizzle": "🌦️",
+    "Thunderstorm": "⛈️", "Snow": "❄️", "Mist": "🌫️", "Fog": "🌫️",
+    "Haze": "🌅", "Atmosphere": "🌫️",
+}
+
+
+st.markdown("""
 <style>
-/* Main body styling and dynamic background gradient */
-.stApp {{
-    background: linear-gradient(135deg, #1A1A2E, #16213E, #0F3460);
-    color: #FFFFFF;
-    font-family: 'Poppins', sans-serif;
-}}
+.stApp {
+    background: linear-gradient(135deg, #cfe9fb 0%, #eaf6ff 50%, #fdf6e3 100%);
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+}
 
-/* Custom titles and headers */
-.main-title {{
-    color: #1DB954; 
-    text-align: center; 
-    font-size: 3rem !important; 
-    font-weight: bold;
-    margin-bottom: 20px;
+/* Hide default streamlit chrome bits for a cleaner app-like feel */
+#MainMenu, footer, header { visibility: hidden; }
+
+.app-title {
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: #14213d;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.section-label {
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #6b7280;
+    letter-spacing: 1px;
+    margin: 18px 0 8px 0;
     text-transform: uppercase;
-}}
-.sidebar .stText, .sidebar .stSubheader {{ color: #FFFFFF !important; }}
+}
 
-/* Input and buttons styling */
-div.stTextInput>div>div>input {{
-    background-color: #333333; 
-    color: white !important; 
-    border-radius: 20px; 
-    border: 1px solid #1DB954; 
-    padding: 10px;
-}}
-div.stButton>button {{
-    background-color: #1DB954; 
-    color: white; 
-    border-radius: 20px; 
-    width: 100%; 
-    border: none; 
-    font-weight: bold; 
-    height: 3em;
+/* Sidebar card */
+.sidebar-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: 18px;
+    padding: 18px;
+    backdrop-filter: blur(6px);
+}
+
+.recent-item, .mood-item {
+    background: rgba(255,255,255,0.6);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    font-size: 0.92rem;
+    color: #1f2937;
+}
+
+/* Glass-style content cards */
+.glass-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: 20px;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgba(31, 41, 55, 0.08);
+    margin-bottom: 20px;
+    height: 100%;
+}
+
+.card-label {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #374151;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.weather-temp {
+    font-size: 3.2rem;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1;
+}
+.weather-desc {
     font-size: 1.1rem;
-}}
-div.stButton>button:hover {{
-    background-color: #1ed760; 
-    border: 1px solid white;
-}}
+    color: #374151;
+    margin-top: 4px;
+}
+.weather-emoji {
+    font-size: 3.5rem;
+}
 
-/* Custom Cards (Mood panel, Track suggestions) */
-.card {{
-    background-color: #222222;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    margin-bottom: 20px;
-    border-left: 5px solid #1DB954;
-}}
-.card h2 {{ font-size: 1.5rem; }}
+/* Mood orb */
+.mood-orb-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+.mood-orb {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: #111827;
+}
 
-/* Deezer direct link button */
-.listen-button {{
-    display: block; 
-    width: 100%; 
-    text-align: center; 
-    background-color: #FFFFFF; 
-    color: #121212 !important; 
-    border-radius: 20px; 
-    padding: 15px; 
-    font-weight: bold; 
-    text-decoration: none !important;
-    font-size: 1.2rem;
-    margin-top: 15px;
-    transition: 0.3s;
-}}
-.listen-button:hover {{
-    background-color: #1DB954;
-    color: white !important;
-    transform: scale(1.05);
-}}
+/* Now playing card */
+.track-art {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ff6ec4, #7873f5, #4ade80, #facc15);
+    background-size: 300% 300%;
+    animation: gradientshift 8s ease infinite;
+}
+@keyframes gradientshift {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+.track-title { font-size: 1.5rem; font-weight: 800; color: #111827; margin-top: 4px;}
+.track-artist { font-size: 1rem; color: #4b5563; }
 
-/* Dynamic Mood Card styling based on mapped theme */
-.dynamic-mood-card {{
-    background-color: #222222;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    margin-bottom: 20px;
+.listen-button {
+    display: block;
+    width: 100%;
     text-align: center;
-}}
-.mood-label {{ font-size: 1.8rem; font-weight: bold; margin-bottom: 10px; }}
-.mood-icon {{ font-size: 3rem; margin-top: 15px; }}
+    background: linear-gradient(90deg, #1DB954, #2196F3);
+    color: #ffffff !important;
+    border-radius: 14px;
+    padding: 16px;
+    font-weight: 700;
+    text-decoration: none !important;
+    font-size: 1.05rem;
+    transition: 0.25s;
+}
+.listen-button:hover {
+    filter: brightness(1.08);
+    transform: scale(1.02);
+}
 
+/* Stat mini cards */
+.stat-card {
+    background: rgba(255,255,255,0.6);
+    border-radius: 14px;
+    padding: 14px 16px;
+    text-align: center;
+}
+.stat-icon { font-size: 1.3rem; }
+.stat-value { font-weight: 700; font-size: 1.05rem; color: #111827; }
+.stat-label { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Input styling */
+div.stTextInput>div>div>input {
+    background-color: #ffffff;
+    color: #111827 !important;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    padding: 10px;
+}
+div.stSelectbox>div>div {
+    background-color: #ffffff;
+    border-radius: 12px;
+}
+div.stButton>button {
+    background: linear-gradient(90deg, #2196F3, #1DB954);
+    color: white;
+    border-radius: 12px;
+    width: 100%;
+    border: none;
+    font-weight: 700;
+    height: 2.8em;
+}
+div.stButton>button:hover {
+    filter: brightness(1.08);
+}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. Main App Structure
-st.markdown("<h1 class='main-title'>🌤️ Weather Mood Music</h1>", unsafe_allow_html=True)
-
-# Define the grid layout to replicate the multi-panel reference
-col1, col2 = st.columns([1, 2], gap="medium")
-
-# Initialize city (using Lahore as default, since it's the requested location context)
 if 'last_city' not in st.session_state:
     st.session_state['last_city'] = "Lahore"
 if 'weather_data' not in st.session_state:
     st.session_state['weather_data'] = None
+if 'recent_cities' not in st.session_state:
+    st.session_state['recent_cities'] = []
+if 'mood_history' not in st.session_state:
+    st.session_state['mood_history'] = []
 
-# PANEL 1: Input and Information (Sidebar Column)
-with col1:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("Your Location")
-    
-    city_input = st.text_input("Enter city name:", placeholder="e.g., Lahore", value=st.session_state['last_city'])
-    
-    # Use standard Streamlit columns inside the container
-    submit_col1, submit_col2 = st.columns([2, 1])
-    
-    search_type = submit_col1.selectbox("Recommendation type:", ["track", "playlist"])
-    
-    if submit_col2.button("Suggest Music", key="main_search"):
+
+sidebar_col, main_col = st.columns([1, 2.6], gap="medium")
+
+# ---------------- SIDEBAR ----------------
+with sidebar_col:
+    st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+    st.markdown('<div class="app-title">🌤️ WEATHER MOOD<br/>MUSIC</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-label">Enter City</div>', unsafe_allow_html=True)
+    city_input = st.text_input(
+        "Enter city name:",
+        placeholder="e.g., Lahore",
+        value=st.session_state['last_city'],
+        label_visibility="collapsed",
+    )
+    search_type = st.selectbox("Recommendation type:", ["track", "playlist"], label_visibility="collapsed")
+
+    if st.button("Get Weather & Music", key="main_search"):
         if city_input:
             st.session_state['last_city'] = city_input
             with st.spinner('Checking the weather...'):
                 st.session_state['weather_data'] = get_weather(city_input)
-                # Reset music data when city changes
                 if 'track_data' in st.session_state:
                     del st.session_state['track_data']
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    if st.session_state['weather_data']:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("Current Weather")
-        st.write(f"**City:** {st.session_state['weather_data']['City']}")
-        st.write(f"**Condition:** {st.session_state['weather_data']['Condition']}")
-        st.write(f"**Description:** {st.session_state['weather_data']['Description']}")
-        st.markdown('</div>', unsafe_allow_html=True)
 
-# PANEL 2 & 3: Results (Main Column)
-with col2:
+            # Update recent cities (most recent first, unique, max 5)
+            rc = st.session_state['recent_cities']
+            rc = [c for c in rc if c.lower() != city_input.lower()]
+            rc.insert(0, city_input)
+            st.session_state['recent_cities'] = rc[:5]
+
+            # Update mood history once we know the condition
+            if st.session_state['weather_data']:
+                cond = st.session_state['weather_data'].get('Condition')
+                mood = MOOD_MAP.get(cond, DEFAULT_MOOD)
+                mh = st.session_state['mood_history']
+                mh.insert(0, {"mood": mood, "city": city_input})
+                st.session_state['mood_history'] = mh[:5]
+
+   
+    if st.session_state['recent_cities']:
+        st.markdown('<div class="section-label">Recent Cities</div>', unsafe_allow_html=True)
+        for c in st.session_state['recent_cities']:
+            st.markdown(f'<div class="recent-item">{c}</div>', unsafe_allow_html=True)
+
+    if st.session_state['mood_history']:
+        st.markdown('<div class="section-label">Mood History</div>', unsafe_allow_html=True)
+        for entry in st.session_state['mood_history']:
+            m = entry["mood"]
+            st.markdown(
+                f'<div class="mood-item">{m["label"].title()} {m["icon"]} '
+                f'<span style="color:#6b7280;">— {entry["city"]}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------------- MAIN CONTENT ----------------
+with main_col:
     w_data = st.session_state['weather_data']
+
     if w_data:
-        # Determine mood from weather condition
-        w_condition = w_data['Condition']
+        w_condition = w_data.get('Condition', 'Atmosphere')
         mood_details = MOOD_MAP.get(w_condition, DEFAULT_MOOD)
+        emoji = WEATHER_EMOJI.get(w_condition, "🌡️")
+
+        temp = w_data.get('Temperature', w_data.get('Temp'))
+        humidity = w_data.get('Humidity')
+        wind = w_data.get('Wind', w_data.get('WindSpeed'))
+
         
-        # Structure results grid: Mood on top, Track below
-        res_col_left, res_col_right = st.columns([1, 1.5], gap="large")
-        
-        # Results PANEL A: Dynamic Mood Card
-        with res_col_left:
+        top_left, top_right = st.columns([1.6, 1], gap="medium")
+
+        with top_left:
             st.markdown(f"""
-            <div class="dynamic-mood-card" style="border-top: 10px solid {mood_details['theme']}">
-                <div class="mood-label" style="color: {mood_details['theme']}">{mood_details['label']}</div>
-                <div class="mood-icon">{mood_details['icon']}</div>
+            <div class="glass-card">
+                <div class="card-label">{w_data.get('City', city_input).upper()}</div>
+                <div style="display:flex; align-items:center; gap:20px;">
+                    <div class="weather-emoji">{emoji}</div>
+                    <div>
+                        <div class="weather-temp">{f"{temp}°C" if temp is not None else "—"}</div>
+                        <div class="weather-desc">{w_data.get('Description', '').title()}</div>
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
-            
-        # Results PANEL B: Music Recommendation
-        with res_col_right:
-            mood_label = mood_details['label'].lower()
-            
-            # Use cached track data to avoid repeated API calls
-            if 'track_data' not in st.session_state or st.session_state.get('search_type') != search_type:
-                with st.spinner(f"Finding perfect {search_type} for your {mood_label} vibe..."):
-                    st.session_state['track_data'] = get_music_recommendation(mood_label, search_type)
-                    st.session_state['search_type'] = search_type
-            
-            track_title, artist_name, deezer_link = st.session_state['track_data']
-            
-            st.markdown(f'<div class="card">', unsafe_allow_html=True)
-            st.write(f"**Now Recommending:** {'A Song' if search_type == 'track' else 'A Playlist'}")
-            st.write(f"### {track_title}")
-            st.write(f"**by {artist_name}**")
-            
-            # The 'Listen on Deezer' button uses the direct playable link
-            st.markdown(f'<a href="{deezer_link}" target="_blank" class="listen-button">Listen on Deezer</a>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="card" style="text-align: center;">', unsafe_allow_html=True)
-        st.subheader("Welcome to WeatherTunes")
-        st.write("Enter your city and click 'Suggest Music' to experience music tailored to your environment.")
+
+        with top_right:
+            st.markdown(f"""
+            <div class="glass-card">
+                <div class="card-label" style="text-align:center;">Detected Mood</div>
+                <div class="mood-orb-wrap">
+                    <div class="mood-orb" style="background: radial-gradient(circle, {mood_details['theme']}55, {mood_details['theme']}22);
+                         box-shadow: 0 0 35px {mood_details['theme']}66;">
+                        {mood_details['label']}<br/><span style="font-size:2rem;">{mood_details['icon']}</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        mood_label = mood_details['label'].lower()
+        if 'track_data' not in st.session_state or st.session_state.get('search_type') != search_type:
+            with st.spinner(f"Finding the perfect {search_type} for your {mood_label} vibe..."):
+                st.session_state['track_data'] = get_music_recommendation(mood_label, search_type)
+                st.session_state['search_type'] = search_type
+
+        track_title, artist_name, deezer_link = st.session_state['track_data']
+
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        np_label, np_link = st.columns([3, 1])
+        with np_label:
+            st.markdown('<div class="card-label">Now Playing</div>', unsafe_allow_html=True)
+        with np_link:
+            st.markdown(
+                f'<div style="text-align:right;"><a href="{deezer_link}" target="_blank" '
+                f'style="color:#1DB954; font-weight:700; text-decoration:none;">Feel Good Hits &gt;</a></div>',
+                unsafe_allow_html=True,
+            )
+
+        art_col, info_col, btn_col = st.columns([1, 2, 1.4], gap="medium")
+        with art_col:
+            st.markdown('<div class="track-art"></div>', unsafe_allow_html=True)
+        with info_col:
+            st.markdown(f"""
+                <div class="track-title">{track_title}</div>
+                <div class="track-artist">{f"by {artist_name}" if artist_name else ("Mood Uplifters" if search_type == "track" else "Mood Playlist")}</div>
+            """, unsafe_allow_html=True)
+        with btn_col:
+            st.markdown(
+                f'<a href="{deezer_link}" target="_blank" class="listen-button">🎧 Listen on Deezer</a>',
+                unsafe_allow_html=True,
+            )
         st.markdown('</div>', unsafe_allow_html=True)
+
+        s1, s2, s3, s4 = st.columns(4, gap="medium")
+        with s1:
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-icon">🌡️</div>
+                <div class="stat-value">{f"{temp}°C" if temp is not None else "—"}</div>
+                <div class="stat-label">Temperature</div>
+            </div>""", unsafe_allow_html=True)
+        with s2:
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-icon">💧</div>
+                <div class="stat-value">{f"{humidity}%" if humidity is not None else "—"}</div>
+                <div class="stat-label">Humidity</div>
+            </div>""", unsafe_allow_html=True)
+        with s3:
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-icon">🌬️</div>
+                <div class="stat-value">{f"{wind} km/h" if wind is not None else "—"}</div>
+                <div class="stat-label">Wind</div>
+            </div>""", unsafe_allow_html=True)
+        with s4:
+            st.markdown(f"""
+            <div class="stat-card">
+                <div class="stat-icon">{emoji}</div>
+                <div class="stat-value">{w_condition}</div>
+                <div class="stat-label">Condition</div>
+            </div>""", unsafe_allow_html=True)
+
+    else:
+        st.markdown("""
+        <div class="glass-card" style="text-align:center; padding: 60px 20px;">
+            <div style="font-size:3rem;">🎧🌤️</div>
+            <h2 style="color:#111827;">Welcome to WeatherTunes</h2>
+            <p style="color:#4b5563; font-size:1.05rem;">
+                Enter your city in the sidebar and click "Get Weather & Music"<br/>
+                to experience music tailored to your environment.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
